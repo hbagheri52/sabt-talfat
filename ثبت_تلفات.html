@@ -208,8 +208,8 @@ async function setUnregisteredDate(periodId,preloadedEntries){
     const doneDates=entries.filter(e=>{
       const isLegacy=(!e._dayDone&&!e._nightDone);
       if(isLegacy) return true;
-      if(SHIFT==='night') return e._nightDone===true||(e.totalNight!=null&&e.totalNight>=0&&e.hallNight!=null);
-      if(SHIFT==='day') return e._dayDone===true||(e.totalDay!=null&&e.totalDay>=0&&e.hallDay!=null);
+      if(SHIFT==='night') return e._nightDone===true||(e.totalNight!=null&&e.totalNight>0&&e.hallNight!=null);
+      if(SHIFT==='day') return e._dayDone===true||(e.totalDay!=null&&e.totalDay>0&&e.hallDay!=null);
       return e.totalAll>0;
     }).map(e=>e.date);
 
@@ -618,7 +618,9 @@ async function sendToKart(){
       water:0,temp:0,
       _fromWorker:true
     };
-    newEntry.hallDead=newEntry.hallNight.map((n,j)=>n+newEntry.hallDay[j]);
+    const _hn=newEntry.hallNight||[0,0,0,0,0,0];
+    const _hd=newEntry.hallDay||[0,0,0,0,0,0];
+    newEntry.hallDead=_hn.map((n,j)=>n+(_hd[j]||0));
     newEntry.d=newEntry.hallDead;
     newEntry.totalAll=nightTotal+dayTotal+cullTotal;
     newEntry.totalD=nightTotal+dayTotal;
@@ -627,6 +629,7 @@ async function sendToKart(){
   
   const ok=await safeSave(`e_${PERIOD_ID}`,entriesSnapshot,entries,0);
   if(ok){
+    try{localStorage.setItem(`e_${PERIOD_ID}`,JSON.stringify(entries));}catch{}
     toast('✅ ارسال شد!',3000);
     const savedEntry=entries.find(e=>e.date===today);
     // اگه روز کامل شد → بکاپ به تلگرام
@@ -785,7 +788,10 @@ async function deleteEntry(id){
   const entries=await cfGet(`e_${PERIOD_ID}`)||[];
   const newEntries=entries.filter(e=>e.id!==id);
   const ok=await safeSave(`e_${PERIOD_ID}`,entries,newEntries,1);
-  if(ok){toast('✅ حذف شد');loadHistory();}
+  if(ok){
+    try{localStorage.setItem(`e_${PERIOD_ID}`,JSON.stringify(newEntries));}catch{}
+    toast('✅ حذف شد');loadHistory();
+  }
   else toast('⚠️ خطا در حذف');
 }
 
